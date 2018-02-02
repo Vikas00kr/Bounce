@@ -1,0 +1,290 @@
+<!doctype html> 
+<html lang="en"> 
+<head> 
+	<meta charset="UTF-8" />
+    <title>Phaser - Making your first game, part 9</title>
+	<script type="text/javascript" src="src/phaser.min.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<script type="text/javascript">
+
+var game = new Phaser.Game(360, 640, Phaser.AUTO, '', { preload: preload, create: create, update: update ,render: render});
+
+function preload() {
+
+    game.load.image('bg', 'assets/new/blueBG.png');
+    game.load.image('bgImage', 'assets/new/bg.png');
+    game.load.image('bars', 'assets/new/bars.png');
+    game.load.image('ground', 'assets//new/platform.png');
+    game.load.image('star', 'assets/star.png');
+    game.load.image('ball', 'assets/new/ball.png');
+    game.load.image('spikes', 'assets/new/top.png');
+    game.load.image('heart', 'assets/new/heart.png');
+    game.load.image('enemy', 'assets/new/enem.png');
+
+}
+
+var player;
+var platforms;
+var cursors;
+var spikes;
+var stars;
+var score = 0;
+var scoreText;
+var ledge;
+var ledgeSpeed=100;
+var playerSpeed=200;
+var enemy;
+var lifes=3;
+var hearts;
+
+
+function create() {
+
+    game.physics.startSystem(Phaser.Physics.ARCADE);
+    game.add.sprite(0, 0, 'bg');
+    var bars=game.add.sprite((game.world.width-276.434)/2, 0, 'bars');
+    bars.anchor.setTo(0,0);
+    var bg=game.add.sprite(0, 0, 'bgImage');
+    
+      
+    platforms = game.add.group();
+    platforms.enableBody = true;
+    spikePlatforms = game.add.group();
+    spikePlatforms.enableBody = true;    
+
+    createLedge();
+    this.time = game.time.events.loop(1500,createPlatforms,this);
+    
+    var playerPos=platforms.getFirstAlive();
+    player = game.add.sprite(playerPos.x+60, playerPos.y-30, 'ball');
+    player.anchor.setTo(0.5);
+    player.scale.setTo(0.30);
+    game.physics.arcade.enable(player);
+    player.body.bounce.y = 0.4;
+    player.body.gravity.y = 500;
+    player.body.collideWorldBounds = false;
+
+
+    
+    stars = game.add.group();
+    stars.enableBody = true;
+    
+
+    this.timer = game.time.events.loop(3000,createStars, this);         
+
+    spikes=game.add.sprite(0, 0, 'spikes');
+    //spikes.scale.setTo(0.5);
+    game.physics.arcade.enable(spikes);
+    spikes.body.immovable=true;
+
+    scoreText = game.add.text(16, 3, 'Score: 0', { fontSize: '28px', fill: '#fff' });
+    hearts = game.add.group();
+    for(itr=0;itr<3;itr++)
+    {
+    heart = hearts.create(game.world.width-(50+(itr*30)),6,'heart');
+    heart.scale.setTo(0.35);   
+    }
+    cursors = game.input.keyboard.createCursorKeys();
+    
+}
+
+function createStars(){
+    
+    
+    var spawnPos = Math.floor(Math.random() * 36) + 1;
+
+    var star = stars.create(spawnPos * 10, game.world.height, 'star');
+    star.body.velocity.y = -80; 
+
+    
+}
+
+function createPlatforms(){
+var min = 1;
+var max = 5;
+var lastRandom;
+var random;
+if (lastRandom === undefined) {
+    random = Math.floor(Math.random() * (max - min + 1)) + min;
+}
+else {
+    random = Math.floor(Math.random() * (max - min    )) + min;
+    if (random >= lastRandom) random += 1;
+}
+lastRandom = random;    
+    
+    var spawn = random; //game.rnd.integerInRange(1,5);    
+    if (spawn<2)
+    {
+    createEnemy();         
+    }
+    else
+    {
+    createLedge();
+    }
+    
+}
+    
+function createEnemy(){
+    
+var min = 0;
+var max = 2;
+var lastRandom;
+var random;
+if (lastRandom === undefined) {
+    random = Math.floor(Math.random() * (max - min + 1)) + min;
+}
+else {
+    random = Math.floor(Math.random() * (max - min    )) + min;
+    if (random >= lastRandom) random += 1;
+}
+lastRandom = random;
+    
+    var spawnPos = random; //Math.floor(Math.random() * 3) + 0;
+    enemy = spikePlatforms.create(spawnPos*120, game.world.height, 'enemy');
+    //enemy.scale.setTo(0.34);
+    enemy.body.velocity.y = -ledgeSpeed;    
+    enemy.body.immovable = true;
+    enemy.checkWorldBounds = true;
+    enemy.outOfBoundsKill = true;
+
+    
+}    
+    
+function createLedge(){
+    
+var min = 0;
+var max = 2;
+var lastRandom;
+var random;
+if (lastRandom === undefined) {
+    random = Math.floor(Math.random() * (max - min + 1)) + min;
+}
+else {
+    random = Math.floor(Math.random() * (max - min    )) + min;
+    if (random >= lastRandom) random += 1;
+}
+lastRandom = random;
+    
+    var spawnPos = random; //Math.floor(Math.random() * 3) + 0;
+    ledge = platforms.create(spawnPos*120, game.world.height, 'ground');
+    //ledge.anchor.setTo(0.5);
+    //ledge.scale.setTo(0.34);
+    ledge.body.setSize(110, 20, 5, 10);
+    ledge.body.velocity.y = -ledgeSpeed;    
+    ledge.body.immovable = true;
+    ledge.checkWorldBounds = true;
+    ledge.outOfBoundsKill = true;
+
+    
+}  
+    
+
+function update() {
+    
+    game.physics.arcade.collide(player, platforms);
+    game.physics.arcade.overlap(player, spikes , killPlayer, null, this);
+    game.physics.arcade.overlap(player, spikePlatforms , killPlayer, null, this);
+    game.physics.arcade.overlap(player, stars, collectStar, null, this);
+
+    
+
+    if (player.y > game.world.height){
+        killPlayer(player);
+    }
+    else if (player.x > game.world.width){
+        player.x-= game.world.width;
+    }
+    else if (player.x <= 0){
+        player.x+= (game.world.width-20);
+    }
+
+    player.body.velocity.x = 0;
+
+    if (cursors.left.isDown)
+    {
+        //  Move to the left
+        player.body.velocity.x = -playerSpeed;
+    }
+    else if (cursors.right.isDown)
+    {
+        //  Move to the right
+        player.body.velocity.x = playerSpeed;
+    }
+    
+    
+    //  Allow the player to jump if they are touching the ground.
+    if (cursors.up.isDown && player.body.touching.down)
+    {
+        player.body.velocity.y = -350;
+    }
+
+}
+    
+function killPlayer (player, spikes) {
+    
+    lifes = hearts.getFirstAlive();
+
+    if (lifes)
+    {
+        lifes.kill();
+        player.kill();
+        platforms.callAll('kill');
+        spikePlatforms.callAll('kill');
+        player.reset(game.world.centerX,250);
+        
+        
+    
+    }
+
+    if (hearts.countLiving() < 1)
+    {
+    player.kill();
+    platforms.callAll('kill');
+    spikePlatforms.callAll('kill');    
+    scoreText.text = 'Game Over \n Click to restart';
+    scoreText.x=game.world.centerX-80;
+    scoreText.y=game.world.centerY;
+    platforms.callAll('kill');
+    spikePlatforms.callAll('kill');
+
+    game.input.onTap.addOnce(restart,this);
+    }    
+    
+
+}    
+
+function collectStar (player, star) {
+    star.kill();
+    score += 10;
+    scoreText.text = 'Score: ' + score;
+}
+    
+function restart () {
+    hearts.callAll('revive');
+    player.reset(game.world.centerX,250);
+    scoreText.text='Score: 0'
+    scoreText.reset(16,3);
+//    stateText.visible = false;
+
+}
+    
+function render() {
+    
+    //game.debug.body(food,'#0fffff');
+    //game.debug.body(ledge,'#0fffff');
+    //game.debug.body(player,'#0fffff');
+
+}  
+
+</script>
+
+</body>
+</html>
